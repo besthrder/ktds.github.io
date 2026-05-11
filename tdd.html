@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>테스트 주도 개발(TDD) 적용 및 품질 확보 | KTDS</title>
+<meta name="description" content="KTDS 임직원을 위한 3일(21H) 테스트 주도 개발(TDD) 적용 및 품질 확보 과정. Red-Green-Refactor 사이클부터 테스트 자동화까지, 실무 중심 TDD 교육." />
+<style>
+  /* ============ Reset & Base ============ */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  :root {
+    --kt-red: #E60012;
+    --kt-red-dark: #B8000F;
+    --kt-black: #1A1A1A;
+    --kt-charcoal: #2C2C2C;
+    --kt-gray-900: #333333;
+    --kt-gray-700: #555555;
+    --kt-gray-500: #888888;
+    --kt-gray-300: #D4D4D4;
+    --kt-gray-100: #F5F5F5;
+    --kt-gray-50: #FAFAFA;
+    --kt-white: #FFFFFF;
+    --kt-accent: #FF3D4E;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.06);
+    --shadow-md: 0 8px 24px rgba(0,0,0,0.10);
+    --shadow-lg: 0 16px 48px rgba(0,0,0,0.16);
+    --radius-sm: 8px;
+    --radius-md: 14px;
+    --radius-lg: 24px;
+  }
+  body {
+    font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, 'Apple SD Gothic Neo', 'Malgun Gothic', '맑은 고딕', sans-serif;
+    color: var(--kt-black);
+    background: var(--kt-white);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+  a { color: inherit; text-decoration: none; }
+  img { max-width: 100%; display: block; }
+
+  /* ============ Layout ============ */
+  .container { width: 100%; max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+  section { padding: 96px 0; position: relative; }
+  .section-label {
+    display: inline-block; font-size: 13px; font-weight: 700; letter-spacing: 0.18em;
+    color: var(--kt-red); text-transform: uppercase; margin-bottom: 12px;
+  }
+  .section-title {
+    font-size: 40px; font-weight: 800; line-height: 1.25; color: var(--kt-black);
+    margin-bottom: 16px; letter-spacing: -0.02em;
+  }
+  .section-subtitle {
+    font-size: 17px; color: var(--kt-gray-700); margin-bottom: 56px; max-width: 720px;
+  }
+
+  /* ============ Navigation ============ */
+  .nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    background: rgba(26,26,26,0.92); backdrop-filter: blur(12px);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+  }
+  .nav-inner {
+    max-width: 1180px; margin: 0 auto; padding: 14px 24px;
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .nav-brand { display: flex; align-items: center; gap: 12px; color: var(--kt-white); font-weight: 800; }
+  .nav-brand .dot { width: 10px; height: 10px; background: var(--kt-red); border-radius: 2px; }
+  .nav-brand .brand-name { font-size: 16px; letter-spacing: -0.01em; }
+  .nav-brand .brand-tag {
+    font-size: 11px; color: var(--kt-gray-300); font-weight: 500;
+    padding: 3px 8px; border: 1px solid rgba(255,255,255,0.15); border-radius: 999px;
+  }
+  .nav-links { display: flex; gap: 28px; }
+  .nav-links a {
+    font-size: 14px; color: rgba(255,255,255,0.75); font-weight: 500;
+    transition: color 0.2s ease; text-decoration: none; cursor: pointer;
+  }
+  .nav-links a:hover { color: var(--kt-white); text-decoration: none; }
+  .nav-cta {
+    background: var(--kt-red); color: var(--kt-white) !important;
+    padding: 8px 16px; border-radius: 6px; font-weight: 700 !important;
+  }
+  .nav-cta:hover { background: var(--kt-red-dark) !important; }
+  @media (max-width: 760px) { .nav-links { display: none; } }
+
+  /* ============ HERO ============ */
+  .hero {
+    background: linear-gradient(135deg, #0F0F10 0%, #1A1A1A 50%, #2C2C2C 100%);
+    color: var(--kt-white); padding: 160px 0 48px; overflow: hidden; position: relative;
+  }
+  .hero::before {
+    content: ""; position: absolute; top: -180px; right: -180px; width: 540px; height: 540px;
+    background: radial-gradient(circle, rgba(230,0,18,0.22) 0%, transparent 65%);
+    filter: blur(20px);
+  }
+  .hero::after {
+    content: ""; position: absolute; bottom: -120px; left: -120px; width: 380px; height: 380px;
+    background: radial-gradient(circle, rgba(255,61,78,0.12) 0%, transparent 65%);
+    filter: blur(20px);
+  }
+  .hero-inner { position: relative; z-index: 2; }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 8px 16px; border: 1px solid rgba(255,255,255,0.18);
+    border-radius: 999px; background: rgba(255,255,255,0.04);
+    font-size: 13px; color: rgba(255,255,255,0.85); margin-bottom: 28px;
+    font-weight: 500;
+  }
+  .hero-eyebrow .pulse {
+    width: 8px; height: 8px; border-radius: 50%; background: var(--kt-red);
+    box-shadow: 0 0 0 0 rgba(230,0,18,0.6); animation: pulse 1.8s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(230,0,18,0.6); }
+    70% { box-shadow: 0 0 0 12px rgba(230,0,18,0); }
+    100% { box-shadow: 0 0 0 0 rgba(230,0,18,0); }
+  }
+  .hero h1 {
+    font-size: clamp(36px, 5.4vw, 64px);
+    font-weight: 900; line-height: 1.1; letter-spacing: -0.03em;
+    margin-bottom: 24px; max-width: 980px;
+  }
+  .hero h1 .accent { color: var(--kt-red); }
+  .hero h1 .underline {
+    background: linear-gradient(180deg, transparent 65%, rgba(230,0,18,0.4) 65%);
+    padding: 0 4px;
+  }
+  .hero-lede {
+    font-size: clamp(16px, 1.4vw, 19px); color: rgba(255,255,255,0.78);
+    max-width: 720px; margin-bottom: 40px; line-height: 1.65;
+  }
+  .hero-actions { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 56px; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--kt-red); color: var(--kt-white);
+    padding: 16px 28px; border-radius: 8px; font-weight: 700; font-size: 15px;
+    border: none; cursor: pointer; transition: all 0.2s ease;
+    box-shadow: 0 8px 24px rgba(230,0,18,0.32);
+  }
+  .btn-primary:hover { background: var(--kt-red-dark); transform: translateY(-1px); box-shadow: 0 12px 32px rgba(230,0,18,0.42); }
+  .btn-ghost {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: transparent; color: var(--kt-white);
+    padding: 16px 24px; border-radius: 8px; font-weight: 600; font-size: 15px;
+    border: 1px solid rgba(255,255,255,0.25);
+    transition: all 0.2s ease;
+  }
+  .btn-ghost:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.4); }
+
+  /* Meta strip */
+  .hero-meta {
+    display: flex; flex-wrap: wrap; gap: 20px;
+    padding-top: 32px; border-top: 1px solid rgba(255,255,255,0.10);
+  }
+  .meta-item { display: flex; flex-direction: column; gap: 4px; }
+  .meta-label { font-size: 12px; color: #FFB800; font-weight: 700; letter-spacing: normal; text-transform: none; }
+  .meta-value { font-size: 18px; color: var(--kt-white); font-weight: 700; }
+
+  /* ============ Stats ============ */
+  .stats { background: var(--kt-gray-50); padding: 88px 0; }
+  .stats-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; }
+  @media (max-width: 880px) { .stats-grid { grid-template-columns: 1fr; } }
+  .stat-card {
+    background: var(--kt-white); padding: 36px 32px; border-radius: var(--radius-md);
+    box-shadow: var(--shadow-sm); border: 1px solid var(--kt-gray-100);
+    position: relative; overflow: hidden; transition: all 0.3s ease;
+  }
+  .stat-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+  .stat-card::before {
+    content: ""; position: absolute; top: 0; left: 0; width: 4px; height: 100%;
+    background: var(--kt-red);
+  }
+  .stat-number {
+    font-size: 56px; font-weight: 900; color: var(--kt-red);
+    line-height: 1; letter-spacing: -0.04em; margin-bottom: 12px;
+  }
+  .stat-number .unit { font-size: 32px; font-weight: 700; }
+  .stat-title { font-size: 17px; font-weight: 700; color: var(--kt-black); margin-bottom: 8px; }
+  .stat-desc { font-size: 14px; color: var(--kt-gray-700); line-height: 1.55; margin-bottom: 14px; }
+  .stat-source {
+    font-size: 11px; color: var(--kt-gray-500); font-weight: 500;
+    padding-top: 12px; border-top: 1px dashed var(--kt-gray-300);
+  }
+
+  /* ============ WHO + OUTCOME ============ */
+  .audience { background: var(--kt-white); padding: 110px 0; }
+  .audience-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-bottom: 56px;
+  }
+  @media (max-width: 880px) { .audience-grid { grid-template-columns: 1fr; } }
+  .audience-card {
+    background: var(--kt-gray-50); border-radius: var(--radius-md);
+    padding: 36px; border: 1px solid var(--kt-gray-100); transition: all 0.3s ease;
+  }
+  .audience-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-md); }
+  .audience-icon {
+    width: 56px; height: 56px; border-radius: 12px;
+    background: var(--kt-red); color: var(--kt-white);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; margin-bottom: 20px;
+  }
+  .audience-card h3 { font-size: 22px; font-weight: 800; color: var(--kt-black); margin-bottom: 8px; }
+  .audience-card .role {
+    font-size: 13px; color: var(--kt-red); font-weight: 700; letter-spacing: 0.06em;
+    margin-bottom: 20px; text-transform: uppercase;
+  }
+  .transform-row {
+    display: grid; grid-template-columns: 1fr auto 1fr; gap: 16px; align-items: center;
+    padding: 14px 0; border-top: 1px solid var(--kt-gray-300);
+  }
+  .transform-row:first-of-type { border-top: none; padding-top: 4px; }
+  .transform-before { color: var(--kt-gray-500); font-size: 14px; text-decoration: line-through; text-decoration-color: var(--kt-gray-300); }
+  .transform-arrow { color: var(--kt-red); font-weight: 800; font-size: 14px; }
+  .transform-after { color: var(--kt-black); font-size: 14px; font-weight: 600; }
+
+  /* Outcome banner */
+  .outcome-banner {
+    background: linear-gradient(135deg, var(--kt-black) 0%, var(--kt-charcoal) 100%);
+    color: var(--kt-white); border-radius: var(--radius-lg);
+    padding: 44px 48px; display: grid; grid-template-columns: 1fr auto; gap: 32px; align-items: center;
+    position: relative; overflow: hidden;
+  }
+  .outcome-banner::after {
+    content: ""; position: absolute; top: -80px; right: -80px; width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(230,0,18,0.25) 0%, transparent 70%);
+  }
+  .outcome-banner > * { position: relative; z-index: 1; }
+  @media (max-width: 760px) { .outcome-banner { grid-template-columns: 1fr; padding: 32px 28px; } }
+  .outcome-banner h4 { font-size: 14px; color: rgba(255,255,255,0.65); font-weight: 600; margin-bottom: 8px; letter-spacing: 0.04em; }
+  .outcome-banner p { font-size: 22px; font-weight: 800; line-height: 1.4; max-width: 640px; }
+  .outcome-banner p .hl { color: var(--kt-accent); }
+  .outcome-banner .src { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 12px; }
+
+  /* ============ CURRICULUM ============ */
+  .curriculum { background: var(--kt-gray-50); padding: 110px 0; }
+  .timeline { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+  @media (max-width: 880px) { .timeline { grid-template-columns: 1fr; } }
+  .day-card {
+    background: var(--kt-white); border-radius: var(--radius-md);
+    padding: 32px 28px; border: 1px solid var(--kt-gray-100);
+    box-shadow: var(--shadow-sm); position: relative; transition: all 0.3s ease;
+    display: flex; flex-direction: column;
+  }
+  .day-card:hover { transform: translateY(-6px); box-shadow: var(--shadow-md); }
+  .day-card.featured { border-top: 4px solid var(--kt-red); }
+  .day-card.featured-2 { border-top: 4px solid var(--kt-charcoal); }
+  .day-header {
+    display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 8px;
+  }
+  .day-number { font-size: 13px; font-weight: 700; color: var(--kt-red); letter-spacing: 0.12em; text-transform: uppercase; }
+  .day-hours {
+    font-size: 12px; color: var(--kt-white); background: var(--kt-black);
+    padding: 4px 10px; border-radius: 999px; font-weight: 700;
+  }
+  .day-title { font-size: 22px; font-weight: 800; color: var(--kt-black); margin-bottom: 18px; line-height: 1.3; letter-spacing: -0.01em; }
+  .module-list { list-style: none; display: flex; flex-direction: column; gap: 14px; flex: 1; }
+  .module-item { padding-bottom: 14px; border-bottom: 1px dashed var(--kt-gray-300); }
+  .module-item:last-child { border-bottom: none; }
+  .module-name {
+    font-size: 14px; font-weight: 700; color: var(--kt-black); margin-bottom: 4px;
+    display: flex; justify-content: space-between; align-items: center; gap: 8px;
+  }
+  .module-desc { font-size: 13px; color: var(--kt-gray-700); line-height: 1.5; }
+  .deliverable-chip {
+    display: inline-block; font-size: 11px; font-weight: 600;
+    color: var(--kt-gray-700); background: var(--kt-gray-100);
+    padding: 3px 8px; border-radius: 4px; margin-top: 6px; margin-right: 4px;
+  }
+  .deliverable-chip.hot { color: var(--kt-red); background: rgba(230,0,18,0.08); }
+
+  /* ============ METHODOLOGY ============ */
+  .methodology { background: var(--kt-white); padding: 110px 0; }
+  .method-flow {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 56px;
+  }
+  @media (max-width: 880px) { .method-flow { grid-template-columns: repeat(2, 1fr); gap: 16px; } }
+  .method-step {
+    background: var(--kt-gray-50); padding: 22px 16px; border-radius: var(--radius-md);
+    text-align: center; border: 1px solid var(--kt-gray-100); position: relative;
+  }
+  .method-step::after {
+    content: "→"; position: absolute; right: -16px; top: 50%; transform: translateY(-50%);
+    color: var(--kt-red); font-size: 22px; font-weight: 800;
+  }
+  .method-step:last-child::after { display: none; }
+  @media (max-width: 880px) { .method-step::after { display: none; } }
+  .method-step-num {
+    width: 32px; height: 32px; border-radius: 50%; background: var(--kt-red); color: var(--kt-white);
+    font-size: 14px; font-weight: 800; display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 12px;
+  }
+  .method-step-title { font-size: 14px; font-weight: 700; color: var(--kt-black); margin-bottom: 4px; }
+  .method-step-desc { font-size: 12px; color: var(--kt-gray-700); line-height: 1.4; }
+
+  /* Practice split */
+  .practice-split { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+  @media (max-width: 880px) { .practice-split { grid-template-columns: 1fr; } }
+  .practice-card {
+    background: var(--kt-gray-50); padding: 36px 32px; border-radius: var(--radius-md);
+    border-left: 4px solid var(--kt-red);
+  }
+  .practice-card h4 {
+    font-size: 14px; font-weight: 700; color: var(--kt-red); letter-spacing: 0.12em;
+    text-transform: uppercase; margin-bottom: 12px;
+  }
+  .practice-card h3 { font-size: 22px; font-weight: 800; color: var(--kt-black); margin-bottom: 18px; line-height: 1.3; }
+  .practice-card ul { list-style: none; }
+  .practice-card li {
+    padding: 10px 0 10px 24px; position: relative; font-size: 14px;
+    color: var(--kt-gray-900); border-bottom: 1px solid var(--kt-gray-300);
+  }
+  .practice-card li:last-child { border-bottom: none; }
+  .practice-card li::before { content: "✓"; position: absolute; left: 0; color: var(--kt-red); font-weight: 800; }
+
+  /* Prereq callout */
+  .prereq-callout {
+    background: linear-gradient(135deg, var(--kt-black) 0%, var(--kt-charcoal) 100%);
+    color: var(--kt-white); border-radius: var(--radius-lg);
+    padding: 28px 36px; margin-bottom: 40px;
+    display: grid; grid-template-columns: 56px 1fr; gap: 24px; align-items: center;
+    position: relative; overflow: hidden;
+  }
+  .prereq-callout::after {
+    content: ""; position: absolute; top: -60px; right: -60px; width: 220px; height: 220px;
+    background: radial-gradient(circle, rgba(230,0,18,0.22) 0%, transparent 70%);
+  }
+  .prereq-callout > * { position: relative; z-index: 1; }
+  .prereq-icon {
+    width: 56px; height: 56px; border-radius: 12px;
+    background: var(--kt-red); color: var(--kt-white);
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+  }
+  .prereq-content .prereq-tag {
+    display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: 0.12em;
+    color: var(--kt-accent); text-transform: uppercase; margin-bottom: 6px;
+  }
+  .prereq-content h4 { font-size: 19px; font-weight: 800; margin-bottom: 6px; color: var(--kt-white); }
+  .prereq-content p { font-size: 14px; color: rgba(255,255,255,0.78); line-height: 1.55; }
+  @media (max-width: 760px) { .prereq-callout { grid-template-columns: 1fr; padding: 26px; } .prereq-icon { margin: 0 auto; } }
+
+  /* ============ DIFFERENTIATORS + CTA ============ */
+  .differentiators {
+    background: linear-gradient(180deg, var(--kt-gray-50) 0%, var(--kt-white) 100%); padding: 110px 0;
+  }
+  .diff-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; margin-bottom: 56px; }
+  @media (max-width: 760px) { .diff-grid { grid-template-columns: 1fr; } }
+  .diff-card {
+    background: var(--kt-white); padding: 32px; border-radius: var(--radius-md);
+    border: 1px solid var(--kt-gray-100); transition: all 0.3s ease; display: flex; gap: 20px;
+  }
+  .diff-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-md); }
+  .diff-icon {
+    flex-shrink: 0; width: 48px; height: 48px; border-radius: 10px;
+    background: rgba(230,0,18,0.08); color: var(--kt-red);
+    display: flex; align-items: center; justify-content: center; font-size: 22px;
+  }
+  .diff-card h4 { font-size: 17px; font-weight: 800; color: var(--kt-black); margin-bottom: 6px; }
+  .diff-card p { font-size: 14px; color: var(--kt-gray-700); line-height: 1.55; }
+
+  /* CTA */
+  .cta-final {
+    background: var(--kt-black); color: var(--kt-white);
+    border-radius: var(--radius-lg); padding: 56px 48px; text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .cta-final::before {
+    content: ""; position: absolute; top: -100px; left: 50%; transform: translateX(-50%);
+    width: 600px; height: 600px;
+    background: radial-gradient(circle, rgba(230,0,18,0.18) 0%, transparent 60%);
+  }
+  .cta-final > * { position: relative; z-index: 1; }
+  .cta-final h2 {
+    font-size: clamp(28px, 3vw, 38px); font-weight: 900; line-height: 1.25;
+    margin-bottom: 14px; letter-spacing: -0.02em;
+  }
+  .cta-final h2 .hl { color: var(--kt-red); }
+  .cta-final p { font-size: 16px; color: rgba(255,255,255,0.75); margin-bottom: 32px; max-width: 560px; margin-left: auto; margin-right: auto; }
+  .cta-meta {
+    display: inline-flex; flex-wrap: wrap; gap: 24px; justify-content: center;
+    padding: 14px 28px; background: rgba(255,255,255,0.05); border-radius: 999px;
+    margin-top: 28px; font-size: 13px; color: rgba(255,255,255,0.8);
+  }
+  .cta-meta span { display: inline-flex; align-items: center; gap: 6px; }
+  .cta-meta span::before { content: "•"; color: var(--kt-red); }
+  .cta-meta span:first-child::before { content: ""; }
+
+  /* ============ Footer ============ */
+  footer { background: var(--kt-black); color: rgba(255,255,255,0.55); padding: 32px 0; font-size: 13px; }
+  .footer-inner {
+    max-width: 1180px; margin: 0 auto; padding: 0 24px;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 16px;
+  }
+  .footer-inner .brand-row { display: flex; align-items: center; gap: 12px; color: var(--kt-white); font-weight: 700; }
+  .footer-inner .brand-row .dot { width: 8px; height: 8px; background: var(--kt-red); border-radius: 2px; }
+  .footer-qr { display: flex; align-items: center; gap: 14px; }
+  .footer-qr-text { display: flex; flex-direction: column; }
+  #qrcode { background: #fff; padding: 6px; border-radius: 6px; line-height: 0; }
+
+  /* ============ Animations ============ */
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal { opacity: 0; transform: translateY(20px); transition: all 0.6s ease; }
+    .reveal.is-visible { opacity: 1; transform: translateY(0); }
+  }
+
+  /* 과정명 태그 */
+  .course-name-tag {
+    display: inline-block;
+    font-size: 22px; font-weight: 800;
+    color: #FFB800;
+    letter-spacing: -0.01em;
+    margin-bottom: 28px;
+  }
+
+  /* ============ Mobile ============ */
+  @media (max-width: 760px) {
+    section { padding: 64px 0; }
+    .hero { padding: 130px 0 80px; }
+    .section-title { font-size: 30px; }
+    .hero-meta { gap: 20px; }
+    .stat-number { font-size: 44px; }
+    .stat-number .unit { font-size: 26px; }
+    .outcome-banner p { font-size: 18px; }
+    .cta-final { padding: 44px 28px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ============ NAVIGATION ============ -->
+<nav class="nav">
+  <div class="nav-inner">
+    <a onclick="goTo('hero')" class="nav-brand" style="cursor:pointer;">
+      <span class="dot"></span>
+      <span class="brand-name">KTDS</span>
+      <span class="brand-tag">SW College</span>
+    </a>
+
+  </div>
+</nav>
+
+<!-- ============ 1) HERO ============ -->
+<section class="hero" id="hero">
+  <div class="container hero-inner">
+    <div class="hero-eyebrow">
+      <span class="pulse"></span>
+      KTDS SW College · 3일 집중 과정
+    </div>
+    <div class="course-name-tag">테스트 주도 개발(TDD) 적용 및 품질 확보</div>
+    <h1>
+      <span class="accent">테스트 코드</span>가 먼저,<br/>
+      <span class="underline">코드 품질</span>은<br/>
+      자연스럽게 따라오는 과정
+    </h1>
+    <p class="hero-lede" style="white-space: nowrap;">
+      Red-Green-Refactor 사이클부터 테스트 자동화까지 — TDD 개발 방법론을 체득하고 실제 프로젝트에 바로 적용할 수 있는 실무 역량을 3일 만에 확보합니다.
+    </p>
+    <div class="hero-actions">
+      <a onclick="goTo('curriculum')" class="btn-primary" style="cursor:pointer;">커리큘럼 보기 →</a>
+      <a onclick="goTo('apply')" class="btn-ghost" style="cursor:pointer;">과정 특징</a>
+    </div>
+    <div class="hero-meta">
+      <div class="meta-item">
+        <span class="meta-label">교육일정</span>
+        <span class="meta-value">06.10 (수) · 06.12 (금)</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">교육기간</span>
+        <span class="meta-value">3일 · 21시간</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">강의장소</span>
+        <span class="meta-value">209호</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">실습비중</span>
+        <span class="meta-value">이론 40% / 실습 60%</span>
+      </div>
+      <div class="meta-item">
+        <span class="meta-label">추천직무</span>
+        <span class="meta-value">SW · Backend · Full Stack 개발자</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ 2) WHY (Stats) ============ -->
+<section class="stats" id="why">
+  <div class="container">
+    <span class="section-label">Why TDD</span>
+    <h2 class="section-title">왜 지금 TDD인가</h2>
+    <p class="section-subtitle" style="max-width: 100%; white-space: nowrap;">테스트 없이 개발하면 나중에 더 많은 시간을 쏟게 됩니다. TDD는 처음부터 품질을 코드에 내재화하는 방법입니다.</p>
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-number">40<span class="unit">%</span></div>
+        <div class="stat-title">TDD 적용 시 버그 감소율</div>
+        <div class="stat-desc">TDD를 적용한 프로젝트는 그렇지 않은 프로젝트 대비 평균 40% 이상 버그가 줄어들고, 유지보수 비용도 크게 감소합니다.</div>
+        <div class="stat-source">IEEE Software · TDD Impact Study 2023</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">2<span class="unit">배</span></div>
+        <div class="stat-title">리팩토링 속도 향상</div>
+        <div class="stat-desc">테스트 코드가 있으면 코드 구조를 바꿀 때 두려움이 사라집니다. 테스트가 안전망이 되어 리팩토링 속도가 2배 이상 빨라집니다.</div>
+        <div class="stat-source">Martin Fowler · Refactoring 2nd Edition</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-number">3<span class="unit">일</span></div>
+        <div class="stat-title">실무 프로젝트 적용까지 걸리는 시간</div>
+        <div class="stat-desc">단위 테스트 작성, Mock 객체 활용, 테스트 자동화까지 — 3일 과정으로 실제 프로젝트에 바로 적용 가능한 TDD 역량을 확보합니다.</div>
+        <div class="stat-source">KTDS SW College · 과정 설계 기준</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 3) WHO + OUTCOME ============ -->
+<section class="audience" id="audience">
+  <div class="container">
+    <span class="section-label">Who</span>
+    <h2 class="section-title">이런 분들을 위한 과정입니다</h2>
+    <p class="section-subtitle" style="max-width: 100%; white-space: nowrap;">테스트 기반 개발 역량이 필요한 모든 개발자라면 직무에 관계없이 누구나 참여할 수 있습니다.</p>
+
+    <div class="audience-grid">
+      <div class="audience-card">
+        <div class="audience-icon">💻</div>
+        <h3>SW Developer</h3>
+        <div class="role">Software Developer</div>
+        <div class="transform-row">
+          <span class="transform-before">테스트 없이 개발 진행</span>
+          <span class="transform-arrow">→</span>
+          <span class="transform-after">TDD 사이클 기반 개발</span>
+        </div>
+        <div class="transform-row">
+          <span class="transform-before">버그 발견 후 수정</span>
+          <span class="transform-arrow">→</span>
+          <span class="transform-after">테스트로 선제적 품질 확보</span>
+        </div>
+        <div class="transform-row">
+          <span class="transform-before">단위 테스트 작성 막막</span>
+          <span class="transform-arrow">→</span>
+          <span class="transform-after">테스트 코드 직접 작성 실습</span>
+        </div>
+      </div>
+      <div class="audience-card">
+        <div class="audience-icon">🖥️</div>
+        <h3>Backend Developer</h3>
+        <div class="role">Backend Developer</div>
+        <div class="transform-row">
+          <span class="transform-before">Mock 객체 개념 생소</span>
+          <span class="transform-arrow">→</span>
+          <span class="transform-after">Mock 객체 활용 테스트 실습</span>
+        </div>
+        <div class="transform-row">
+          <span class="transform-before">테스트 커버리지 관리 없음</span>
+          <span class="transform-arrow">→</span>
+          <span class="transform-after">테스트 커버리지 분석·관리</span>
+        </div>
+        <div class="transform-row">
+          <span class="transform-before">리팩토링 두려움</span>
+          <span class="transform-arrow">→</span>
+          <span class="transform-after">테스트 안전망으로 자신 있는 리팩토링</span>
+        </div>
+      </div>
+      <div class="audience-card">
+        <div class="audience-icon">🔧</div>
+        <h3>Full Stack Developer</h3>
+        <div class="role">Full Stack Developer</div>
+        <div class="transform-row">
+          <span class="transform-before">테스트 코드 구조 설계 미흡</span>
+          <span class="transform-arrow">→</span>
+          <span class="transform-after">테스트 코드 구조 체계적 설계</span>
+        </div>
+        <div class="transform-row">
+          <span class="transform-before">테스트 자동화 경험 없음</span>
+          <span class="transform-arrow">→</span>
+          <span class="transform-after">테스트 자동화 개념 및 적용</span>
+        </div>
+        <div class="transform-row">
+          <span class="transform-before">코드 품질 측정 방법 모름</span>
+          <span class="transform-arrow">→</span>
+          <span class="transform-after">테스트 커버리지 기반 품질 측정</span>
+        </div>
+      </div>
+      <div class="audience-card">
+        <div class="audience-icon">🛡️</div>
+        <h3>테스트 기반 개발 역량이 필요한 개발자</h3>
+        <div class="role">Quality-Aware Developer</div>
+        <div class="transform-row">
+          <span class="transform-before">TDD 개념만 알고 실습 없음</span>
+          <span class="transform-arrow">→</span>
+          <span class="transform-after">Red-Green-Refactor 직접 체득</span>
+        </div>
+        <div class="transform-row">
+          <span class="transform-before">테스트 유지 관리 어려움</span>
+          <span class="transform-arrow">→</span>
+          <span class="transform-after">테스트 유지 관리 방법 습득</span>
+        </div>
+        <div class="transform-row">
+          <span class="transform-before">실제 프로젝트 적용 막막</span>
+          <span class="transform-arrow">→</span>
+          <span class="transform-after">실제 개발 프로젝트에 TDD 적용</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="outcome-banner">
+      <div>
+        <h4>교육 후 기대효과</h4>
+        <p>테스트 코드를 작성하고 <span class="hl">TDD 방식으로 프로그램을 개발</span>하며,<br/>테스트 기반 개발 프로세스를 <span class="hl">실제 개발 프로젝트에 적용</span>할 수 있게 됩니다.</p>
+        <p class="src">단위 테스트 작성부터 테스트 자동화까지 3일 집중 실습으로 완성</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 4) CURRICULUM ============ -->
+<section class="curriculum" id="curriculum">
+  <div class="container">
+    <span class="section-label">Curriculum</span>
+    <h2 class="section-title">3일 커리큘럼</h2>
+    <p class="section-subtitle" style="white-space: nowrap;">
+      TDD 개념 이해부터 Mock 객체 활용, 테스트 자동화까지 — 매일 실습 산출물을 만들며 체득합니다.
+    </p>
+    <div class="timeline">
+
+      <!-- Day 1 -->
+      <div class="day-card featured">
+        <div class="day-header">
+          <span class="day-number">Day 1 · 테스트와 TDD 이해</span>
+          <span class="day-hours">7H</span>
+        </div>
+        <h3 class="day-title">"TDD가 무엇이고 왜 써야 하는지" 이해하는 날</h3>
+        <ul class="module-list">
+          <li class="module-item">
+            <div class="module-name">소프트웨어 테스트 개념</div>
+            <div class="module-desc">테스트의 목적과 종류, 소프트웨어 품질과 테스트의 관계 이해</div>
+          </li>
+          <li class="module-item">
+            <div class="module-name">단위 테스트 개념 · 테스트 프레임워크 이해</div>
+            <div class="module-desc">단위 테스트의 정의와 작성 원칙, JUnit / PyTest 프레임워크 사용법</div>
+          </li>
+          <li class="module-item">
+            <div class="module-name">TDD 개발 사이클 (Red-Green-Refactor)</div>
+            <div class="module-desc">실패하는 테스트 작성 → 코드 구현 → 리팩토링의 TDD 3단계 사이클 이해 및 실습</div>
+          </li>
+          <li class="module-item">
+            <div class="module-name">테스트 코드 작성 원칙</div>
+            <div class="module-desc">좋은 테스트 코드의 조건(FIRST 원칙)과 테스트 가독성 향상 방법</div>
+            <span class="deliverable-chip hot">테스트 코드 작성</span>
+            <span class="deliverable-chip hot">단위 테스트 실습</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Day 2 -->
+      <div class="day-card featured-2">
+        <div class="day-header">
+          <span class="day-number">Day 2 · TDD 기반 개발</span>
+          <span class="day-hours">7H</span>
+        </div>
+        <h3 class="day-title">"TDD로 실제 기능을 개발하는" 날</h3>
+        <ul class="module-list">
+          <li class="module-item">
+            <div class="module-name">TDD 개발 프로세스</div>
+            <div class="module-desc">요구사항 분석부터 테스트 설계, 구현, 리팩토링까지 TDD 전체 개발 흐름 실습</div>
+          </li>
+          <li class="module-item">
+            <div class="module-name">테스트 설계 방법 · Mock 객체 활용</div>
+            <div class="module-desc">경계값 분석, 동등 분할 등 테스트 설계 기법과 Mock 객체를 활용한 의존성 분리 실습</div>
+          </li>
+          <li class="module-item">
+            <div class="module-name">테스트 코드 구조 설계 · 테스트 커버리지 이해</div>
+            <div class="module-desc">유지보수 가능한 테스트 코드 구조 설계 방법과 커버리지 측정 도구 활용</div>
+            <span class="deliverable-chip hot">TDD 기반 기능 구현</span>
+            <span class="deliverable-chip hot">Mock 활용 테스트 실습</span>
+          </li>
+        </ul>
+      </div>
+
+      <!-- Day 3 -->
+      <div class="day-card" style="border-top: 4px solid #555555;">
+        <div class="day-header">
+          <span class="day-number">Day 3 · 테스트 기반 코드 개선</span>
+          <span class="day-hours">7H</span>
+        </div>
+        <h3 class="day-title">"테스트로 코드를 개선하고 자동화하는" 날</h3>
+        <ul class="module-list">
+          <li class="module-item">
+            <div class="module-name">테스트 가능한 코드 설계</div>
+            <div class="module-desc">의존성 주입, 단일 책임 원칙 등 테스트하기 쉬운 코드 구조 설계 방법</div>
+          </li>
+          <li class="module-item">
+            <div class="module-name">테스트 구조 개선</div>
+            <div class="module-desc">중복 제거, 테스트 픽스처 활용 등 기존 테스트 코드의 구조를 개선하는 방법</div>
+          </li>
+          <li class="module-item">
+            <div class="module-name">테스트 자동화 개념 · 테스트 유지 관리 방법</div>
+            <div class="module-desc">CI/CD 파이프라인과 테스트 자동화 연계, 장기적인 테스트 유지 관리 전략</div>
+            <span class="deliverable-chip hot">테스트 기반 기능 구현</span>
+            <span class="deliverable-chip hot">테스트 코드 개선</span>
+            <span class="deliverable-chip hot">테스트 커버리지 분석</span>
+          </li>
+        </ul>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ============ 5) METHODOLOGY ============ -->
+<section class="methodology" id="methodology">
+  <div class="container">
+    <span class="section-label">Methodology</span>
+    <h2 class="section-title">우리는 이렇게 가르칩니다</h2>
+    <p class="section-subtitle" style="max-width: 100%; white-space: nowrap;">
+      TDD 개념 설명으로 끝나지 않습니다. Red-Green-Refactor를 직접 반복하며 손으로 체득하는 실습 60% 과정입니다.
+    </p>
+
+    <div class="method-flow">
+      <div class="method-step">
+        <div class="method-step-num">1</div>
+        <div class="method-step-title">테스트 이해</div>
+        <div class="method-step-desc">단위 테스트·TDD 사이클 파악</div>
+      </div>
+      <div class="method-step">
+        <div class="method-step-num">2</div>
+        <div class="method-step-title">TDD 적용</div>
+        <div class="method-step-desc">Red-Green-Refactor 직접 실습</div>
+      </div>
+      <div class="method-step">
+        <div class="method-step-num">3</div>
+        <div class="method-step-title">코드 개선</div>
+        <div class="method-step-desc">Mock 활용·테스트 구조 개선</div>
+      </div>
+      <div class="method-step">
+        <div class="method-step-num">4</div>
+        <div class="method-step-title">자동화</div>
+        <div class="method-step-desc">테스트 자동화·커버리지 분석</div>
+      </div>
+    </div>
+
+    <div class="prereq-callout">
+      <div class="prereq-icon">📚</div>
+      <div class="prereq-content">
+        <span class="prereq-tag">사전 지식 안내</span>
+        <h4>이 정도면 충분합니다</h4>
+        <p>프로그래밍 언어 기본 이해(Java / Python 등), 객체지향 프로그래밍 이해, 기본적인 테스트 개념 이해 수준이면 누구나 참여할 수 있습니다.</p>
+      </div>
+    </div>
+
+    <div class="practice-split">
+      <div class="practice-card">
+        <h4>제공 기술·플랫폼</h4>
+        <h3>실습에 바로 활용 가능한 환경을 제공합니다.</h3>
+        <ul>
+          <li>Visual Studio Code / IntelliJ</li>
+          <li>Java / Python</li>
+          <li>테스트 프레임워크 (JUnit / PyTest 등)</li>
+          <li>Git</li>
+        </ul>
+      </div>
+      <div class="practice-card">
+        <h4>실습 산출물</h4>
+        <h3>매일 손으로 만들어 가져가는 결과물이 있습니다.</h3>
+        <ul>
+          <li>Day 1: 테스트 코드 작성 · 단위 테스트 실습 결과물</li>
+          <li>Day 2: TDD 기반 기능 구현 · Mock 활용 테스트 실습 결과물</li>
+          <li>Day 3: 테스트 기반 기능 구현 · 테스트 코드 개선 · 커버리지 분석 결과물</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ 6) DIFFERENTIATORS + CTA ============ -->
+<section class="differentiators" id="apply">
+  <div class="container">
+    <span class="section-label">Why This Course</span>
+    <h2 class="section-title">다른 개발 교육과 무엇이 다릅니까?</h2>
+    <p class="section-subtitle" style="white-space: nowrap;">
+      TDD 개념 강의로 끝나지 않습니다. Red-Green-Refactor를 3일 내내 반복하며 몸으로 익히는 과정입니다.
+    </p>
+
+    <div class="diff-grid">
+      <div class="diff-card">
+        <div class="diff-icon">🎯</div>
+        <div>
+          <h4>3일 내내 반복하는 TDD 사이클</h4>
+          <p>Red-Green-Refactor 사이클을 매 세션마다 반복 실습합니다. 개념을 듣는 것과 직접 반복하는 것은 완전히 다른 수준의 학습 효과를 만들어냅니다.</p>
+        </div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-icon">🔍</div>
+        <div>
+          <h4>실습비중 60%</h4>
+          <p>이론 40%, 실습 60%로 구성됩니다. 테스트 코드 작성, Mock 객체 활용, 테스트 커버리지 분석까지 강의실에서 직접 코드를 만들고 개선합니다.</p>
+        </div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-icon">⚡</div>
+        <div>
+          <h4>Day별 완성 산출물</h4>
+          <p>단위 테스트 코드, TDD 기반 기능 구현 결과물, 테스트 커버리지 분석 결과까지 — 매일 손으로 만들어 과정 종료 후 바로 프로젝트에 적용할 수 있습니다.</p>
+        </div>
+      </div>
+      <div class="diff-card">
+        <div class="diff-icon">🧭</div>
+        <div>
+          <h4>테스트 자동화까지 연결</h4>
+          <p>단순 테스트 작성에서 끝나지 않습니다. CI/CD 파이프라인과의 연계, 테스트 유지 관리 전략까지 다루어 지속 가능한 TDD 문화를 만들 수 있습니다.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Final CTA -->
+    <div class="cta-final">
+      <h2>"테스트 코드가 먼저,<br/><span class="hl">품질은 자연스럽게 따라옵니다.</span>"</h2>
+      <p>3일이면 충분합니다. TDD를 팀 개발 문화로 만들어 보세요.</p>
+      <div class="cta-meta">
+        <span>3일 21시간</span>
+        <span>이론 40% · 실습 60%</span>
+        <span>SW · Backend · Full Stack 개발자</span>
+        <span>06.10 (수) · 06.12 (금) · 209호</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ FOOTER ============ -->
+<footer>
+  <div class="footer-inner">
+    <div class="brand-row">
+      <span class="dot"></span>
+      <span>KTDS SW College</span>
+    </div>
+    <div class="footer-qr">
+      <div id="qrcode"></div>
+      <div class="footer-qr-text">
+        <div style="font-size:11px; color:rgba(255,255,255,0.5); margin-bottom:4px;">QR코드로 바로 열기</div>
+        <div style="font-size:12px; color:rgba(255,255,255,0.75); font-weight:600;">테스트 주도 개발(TDD) 적용 및 품질 확보</div>
+      </div>
+    </div>
+    <div>
+      © 2026 KTDS. 테스트 주도 개발(TDD) 적용 및 품질 확보 과정 · 사내 교육 자료
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+  // 부드러운 스크롤 이동 함수
+  function goTo(id) {
+    const target = document.getElementById(id);
+    if (!target) return;
+    const navHeight = document.querySelector('.nav').offsetHeight;
+    const top = target.getBoundingClientRect().top + window.scrollY - navHeight - 16;
+    window.scrollTo({ top: top, behavior: 'smooth' });
+  }
+
+  // 스크롤 애니메이션
+  (function () {
+    if (!('IntersectionObserver' in window)) return;
+    const targets = document.querySelectorAll('.stat-card, .audience-card, .day-card, .method-step, .practice-card, .diff-card, .outcome-banner');
+    targets.forEach(el => el.classList.add('reveal'));
+    const io = new IntersectionObserver(entries => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('is-visible');
+          io.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.12 });
+    targets.forEach(el => io.observe(el));
+  })();
+
+  // QR코드 생성
+  new QRCode(document.getElementById('qrcode'), {
+    text: 'https://mellifluous-nougat-b03440.netlify.app/',
+    width: 90,
+    height: 90,
+    colorDark: '#1A1A1A',
+    colorLight: '#FFFFFF',
+    correctLevel: QRCode.CorrectLevel.H
+  });
+</script>
+
+</body>
+</html>
